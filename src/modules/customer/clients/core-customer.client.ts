@@ -1,8 +1,30 @@
 import { HttpService } from '@nestjs/axios';
+import { AxiosError } from 'axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import type { IntegrationStatusDto } from '../../../common/dto/integration-status.dto';
+import type { CustomerEnrollmentCoreRecordDto } from '../dto/customer-enrollment-trace.dto';
+import type { CustomerPasswordChangeCoreRecordDto } from '../dto/customer-password-change.dto';
+import type { CustomerLoginCoreRecordDto } from '../dto/customer-login.dto';
+
+interface EnrollmentPayload {
+  transactionId: string;
+  customerEmailHash: string;
+}
+
+interface PasswordChangePayload {
+  requestId: string;
+  transactionId: string;
+  customerEmailHash: string;
+}
+
+interface LoginPayload {
+  loginId: string;
+  requestId: string;
+  transactionId: string;
+  customerEmailHash: string;
+}
 
 @Injectable()
 export class CoreCustomerClient {
@@ -23,8 +45,10 @@ export class CoreCustomerClient {
   }
 
   async ping(): Promise<IntegrationStatusDto> {
+    const checkedAt = new Date().toISOString();
+
     try {
-      await firstValueFrom(
+      const response = await firstValueFrom(
         this.httpService.get(`${this.baseUrl}/health`, {
           timeout: 1500,
         }),
@@ -33,16 +57,217 @@ export class CoreCustomerClient {
       return {
         available: true,
         baseUrl: this.baseUrl,
-        checkedAt: new Date().toISOString(),
+        checkedAt,
+        reason: 'healthy',
+        statusCode: response.status,
       };
     } catch (error) {
-      this.logger.debug(`Core customer unavailable at ${this.baseUrl}`);
+      const status = this.mapErrorToStatus(error, checkedAt);
+      this.logger.debug(
+        `Core customer unavailable at ${this.baseUrl} (${status.reason}${status.statusCode ? `:${status.statusCode}` : ''})`,
+      );
+      return status;
+    }
+  }
+
+  async handoffEnrollment(
+    payload: EnrollmentPayload,
+  ): Promise<{ accepted: boolean; statusCode?: number }> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${this.baseUrl}/v1/customer-enrollments`,
+          payload,
+          {
+            timeout: 1500,
+          },
+        ),
+      );
+
+      return {
+        accepted: response.status >= 200 && response.status < 300,
+        statusCode: response.status,
+      };
+    } catch (error) {
+      if (error instanceof AxiosError && error.response) {
+        return {
+          accepted: false,
+          statusCode: error.response.status,
+        };
+      }
+
+      return {
+        accepted: false,
+      };
+    }
+  }
+
+  async getEnrollmentByTransactionId(
+    transactionId: string,
+  ): Promise<CustomerEnrollmentCoreRecordDto | null> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(
+          `${this.baseUrl}/v1/customer-enrollments/${encodeURIComponent(transactionId)}`,
+          {
+            timeout: 1500,
+          },
+        ),
+      );
+
+      return response.data as CustomerEnrollmentCoreRecordDto;
+    } catch (error) {
+      if (error instanceof AxiosError && error.response?.status === 404) {
+        return null;
+      }
+
+      return null;
+    }
+  }
+
+  async handoffPasswordChange(
+    payload: PasswordChangePayload,
+  ): Promise<{ accepted: boolean; statusCode?: number }> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${this.baseUrl}/v1/customer-password-changes`,
+          payload,
+          {
+            timeout: 1500,
+          },
+        ),
+      );
+
+      return {
+        accepted: response.status >= 200 && response.status < 300,
+        statusCode: response.status,
+      };
+    } catch (error) {
+      if (error instanceof AxiosError && error.response) {
+        return {
+          accepted: false,
+          statusCode: error.response.status,
+        };
+      }
+
+      return {
+        accepted: false,
+      };
+    }
+  }
+
+  async getPasswordChangeByRequestId(
+    requestId: string,
+  ): Promise<CustomerPasswordChangeCoreRecordDto | null> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(
+          `${this.baseUrl}/v1/customer-password-changes/${encodeURIComponent(requestId)}`,
+          {
+            timeout: 1500,
+          },
+        ),
+      );
+
+      return response.data as CustomerPasswordChangeCoreRecordDto;
+    } catch (error) {
+      if (error instanceof AxiosError && error.response?.status === 404) {
+        return null;
+      }
+
+      return null;
+    }
+  }
+
+  async handoffLogin(
+    payload: LoginPayload,
+  ): Promise<{ accepted: boolean; statusCode?: number }> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(`${this.baseUrl}/v1/customer-logins`, payload, {
+          timeout: 1500,
+        }),
+      );
+
+      return {
+        accepted: response.status >= 200 && response.status < 300,
+        statusCode: response.status,
+      };
+    } catch (error) {
+      if (error instanceof AxiosError && error.response) {
+        return {
+          accepted: false,
+          statusCode: error.response.status,
+        };
+      }
+
+      return {
+        accepted: false,
+      };
+    }
+  }
+
+  async getLoginByLoginId(
+    loginId: string,
+  ): Promise<CustomerLoginCoreRecordDto | null> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(
+          `${this.baseUrl}/v1/customer-logins/${encodeURIComponent(loginId)}`,
+          {
+            timeout: 1500,
+          },
+        ),
+      );
+
+      return response.data as CustomerLoginCoreRecordDto;
+    } catch (error) {
+      if (error instanceof AxiosError && error.response?.status === 404) {
+        return null;
+      }
+
+      return null;
+    }
+  }
+
+  private mapErrorToStatus(
+    error: unknown,
+    checkedAt: string,
+  ): IntegrationStatusDto {
+    if (error instanceof AxiosError) {
+      if (error.response) {
+        return {
+          available: false,
+          baseUrl: this.baseUrl,
+          checkedAt,
+          reason: 'http_error',
+          statusCode: error.response.status,
+        };
+      }
+
+      if (error.code === 'ECONNABORTED') {
+        return {
+          available: false,
+          baseUrl: this.baseUrl,
+          checkedAt,
+          reason: 'timeout',
+        };
+      }
 
       return {
         available: false,
         baseUrl: this.baseUrl,
-        checkedAt: new Date().toISOString(),
+        checkedAt,
+        reason: 'network_error',
       };
     }
+
+    return {
+      available: false,
+      baseUrl: this.baseUrl,
+      checkedAt,
+      reason: 'unknown_error',
+    };
   }
 }
