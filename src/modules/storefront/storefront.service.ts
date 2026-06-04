@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   STOREFRONT_MAX_REDEEMABLE_PERCENT,
   STOREFRONT_MIN_REDEEM_POINTS,
@@ -19,10 +19,17 @@ import type {
   StorefrontCategoriesResponseDto,
   StorefrontReserveRequestDto,
   StorefrontReserveResponseDto,
+  StorefrontReservationStateResponseDto,
 } from './dto/storefront-home-response.dto';
+
+type MockReservationRecord = Omit<StorefrontReservationStateResponseDto, 'message'> & {
+  createdAt: string;
+};
 
 @Injectable()
 export class StorefrontService {
+  private readonly reservations = new Map<string, MockReservationRecord>();
+
   getHome(): StorefrontHomeResponseDto {
     return {
       ...storefrontHomeMock,
@@ -100,33 +107,133 @@ export class StorefrontService {
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
+    const rulesApplied = {
+      minRedeemPoints: STOREFRONT_MIN_REDEEM_POINTS,
+      redemptionRate: STOREFRONT_REDEMPTION_RATE_LABEL,
+      maxRedeemablePercent: STOREFRONT_MAX_REDEEMABLE_PERCENT,
+      availablePoints: maxAllowedPointsFromWallet,
+      maxAllowedPoints,
+    } as const;
 
-    return {
+    if (status !== 'reserved') {
+      return {
+        source: 'mock',
+        status,
+        reservationId: undefined,
+        expiresAt: undefined,
+        currency: 'USD',
+        requestedPoints: requestedPointsInput,
+        reservedPoints,
+        coveredUsd,
+        payableUsd,
+        message:
+          quote.items.length === 0
+            ? 'Cart is empty. Add at least one item before reserving points.'
+            : `At least ${STOREFRONT_MIN_REDEEM_POINTS} points must be applied and available before reserving.`,
+        rulesApplied,
+      };
+    }
+
+    const reservationId = `rsv_${now.getTime().toString(36)}_${this.reservations.size + 1}`;
+    const reservation: MockReservationRecord = {
       source: 'mock',
-      status,
-      reservationId:
-        status === 'reserved'
-          ? `rsv_${now.getTime().toString(36)}`
-          : undefined,
-      expiresAt: status === 'reserved' ? expiresAt : undefined,
+      reservationId,
+      status: 'reserved',
+      expiresAt,
       currency: 'USD',
       requestedPoints: requestedPointsInput,
       reservedPoints,
       coveredUsd,
       payableUsd,
-      message:
-        status === 'reserved'
-          ? 'Points reserved successfully using the mock storefront reserve flow.'
-          : quote.items.length === 0
-            ? 'Cart is empty. Add at least one item before reserving points.'
-            : `At least ${STOREFRONT_MIN_REDEEM_POINTS} points must be applied and available before reserving.`,
-      rulesApplied: {
-        minRedeemPoints: STOREFRONT_MIN_REDEEM_POINTS,
-        redemptionRate: STOREFRONT_REDEMPTION_RATE_LABEL,
-        maxRedeemablePercent: STOREFRONT_MAX_REDEEMABLE_PERCENT,
-        availablePoints: maxAllowedPointsFromWallet,
-        maxAllowedPoints,
-      },
+      rulesApplied,
+      createdAt: now.toISOString(),
+    };
+
+    this.reservations.set(reservationId, reservation);
+
+    return {
+      ...this.toReservationResponse(
+        reservation,
+        'Points reserved successfully using the mock storefront reserve flow.',
+      ),
+      status: 'reserved',
+    };
+  }
+
+  confirmReservation(reservationId: string): StorefrontReservationStateResponseDto {
+    const reservation = this.getStoredReservation(reservationId);
+
+    if (reservation.status === 'confirmed') {
+      throw new BadRequestException(
+        `Reservation ${reservationId} is already confirmed.`,
+      );
+    }
+
+    if (reservation.status === 'cancelled') {
+      throw new BadRequestException(
+        `Reservation ${reservationId} is already cancelled and cannot be confirmed.`,
+      );
+    }
+
+    reservation.status = 'confirmed';
+    reservation.expiresAt = undefined;
+
+    return this.toReservationResponse(
+      reservation,
+      'Reservation confirmed successfully using the mock storefront reserve flow.',
+    );
+  }
+
+  cancelReservation(reservationId: string): StorefrontReservationStateResponseDto {
+    const reservation = this.getStoredReservation(reservationId);
+
+    if (reservation.status === 'cancelled') {
+      throw new BadRequestException(
+        `Reservation ${reservationId} is already cancelled.`,
+      );
+    }
+
+    if (reservation.status === 'confirmed') {
+      throw new BadRequestException(
+        `Reservation ${reservationId} is already confirmed and cannot be cancelled.`,
+      );
+    }
+
+    reservation.status = 'cancelled';
+    reservation.expiresAt = undefined;
+
+    return this.toReservationResponse(
+      reservation,
+      'Reservation cancelled successfully using the mock storefront reserve flow.',
+    );
+  }
+
+  private getStoredReservation(reservationId: string): MockReservationRecord {
+    const reservation = this.reservations.get(reservationId);
+
+    if (!reservation) {
+      throw new NotFoundException(`Reservation ${reservationId} not found`);
+    }
+
+    return reservation;
+  }
+
+  private toReservationResponse(
+    reservation: MockReservationRecord,
+    message: string,
+  ): StorefrontReservationStateResponseDto {
+    return {
+      source: reservation.source,
+      reservationId: reservation.reservationId,
+      status: reservation.status,
+      expiresAt: reservation.expiresAt,
+      currency: reservation.currency,
+      requestedPoints: reservation.requestedPoints,
+      reservedPoints: reservation.reservedPoints,
+      coveredUsd: reservation.coveredUsd,
+      payableUsd: reservation.payableUsd,
+      message,
+      rulesApplied: reservation.rulesApplied,
     };
   }
 

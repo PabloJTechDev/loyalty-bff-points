@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { StorefrontService } from './storefront.service';
 
 describe('StorefrontService', () => {
@@ -112,7 +112,7 @@ describe('StorefrontService', () => {
     ).toThrow(NotFoundException);
   });
 
-  it('creates a mock reservation when the quote meets reserve rules', () => {
+  it('creates and persists a mock reservation when the quote meets reserve rules', () => {
     const response = service.reserve({
       items: [{ productId: 'prod_headphones', quantity: 1 }],
       requestedPoints: 2000,
@@ -137,6 +137,17 @@ describe('StorefrontService', () => {
     });
     expect(response.reservationId).toMatch(/^rsv_/);
     expect(response.expiresAt).toBeTruthy();
+
+    const confirmed = service.confirmReservation(response.reservationId!);
+    expect(confirmed).toMatchObject({
+      reservationId: response.reservationId,
+      status: 'confirmed',
+      requestedPoints: 2000,
+      reservedPoints: 2000,
+      coveredUsd: 20,
+      payableUsd: 109,
+    });
+    expect(confirmed.expiresAt).toBeUndefined();
   });
 
   it('rejects reservation when requested points do not meet minimum rules', () => {
@@ -155,5 +166,76 @@ describe('StorefrontService', () => {
       coveredUsd: 0,
       payableUsd: 129,
     });
+  });
+
+  it('cancels a reserved reservation', () => {
+    const reservation = service.reserve({
+      items: [{ productId: 'prod_headphones', quantity: 1 }],
+      requestedPoints: 1500,
+      availablePoints: 15200,
+    });
+
+    const cancelled = service.cancelReservation(reservation.reservationId!);
+
+    expect(cancelled).toMatchObject({
+      reservationId: reservation.reservationId,
+      status: 'cancelled',
+      requestedPoints: 1500,
+      reservedPoints: 1500,
+      coveredUsd: 15,
+      payableUsd: 114,
+    });
+    expect(cancelled.expiresAt).toBeUndefined();
+  });
+
+  it('prevents confirming the same reservation twice', () => {
+    const reservation = service.reserve({
+      items: [{ productId: 'prod_headphones', quantity: 1 }],
+      requestedPoints: 1200,
+      availablePoints: 15200,
+    });
+
+    service.confirmReservation(reservation.reservationId!);
+
+    expect(() => service.confirmReservation(reservation.reservationId!)).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('prevents cancelling an already confirmed reservation', () => {
+    const reservation = service.reserve({
+      items: [{ productId: 'prod_headphones', quantity: 1 }],
+      requestedPoints: 1200,
+      availablePoints: 15200,
+    });
+
+    service.confirmReservation(reservation.reservationId!);
+
+    expect(() => service.cancelReservation(reservation.reservationId!)).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('prevents confirming an already cancelled reservation', () => {
+    const reservation = service.reserve({
+      items: [{ productId: 'prod_headphones', quantity: 1 }],
+      requestedPoints: 1200,
+      availablePoints: 15200,
+    });
+
+    service.cancelReservation(reservation.reservationId!);
+
+    expect(() => service.confirmReservation(reservation.reservationId!)).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('throws not found when reservation does not exist', () => {
+    expect(() => service.confirmReservation('rsv_missing')).toThrow(
+      NotFoundException,
+    );
+    expect(() => service.cancelReservation('rsv_missing')).toThrow(
+      NotFoundException,
+    );
   });
 });

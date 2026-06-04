@@ -24,15 +24,55 @@ describe('StorefrontController', () => {
         items: payload.items,
         source: 'mock',
       })),
-      reserve: jest.fn().mockImplementation((payload: { items: unknown[]; requestedPoints?: number }) => ({
+      reserve: jest
+        .fn()
+        .mockImplementation((payload: { items: unknown[]; requestedPoints?: number }) => ({
+          source: 'mock',
+          status: 'reserved',
+          reservationId: 'rsv_test',
+          expiresAt: '2026-06-04T18:15:00.000Z',
+          currency: 'USD',
+          requestedPoints: payload.requestedPoints ?? 0,
+          reservedPoints: payload.requestedPoints ?? 0,
+          coveredUsd: 20,
+          payableUsd: 109,
+          message: 'mock reserve',
+          rulesApplied: {
+            minRedeemPoints: 500,
+            redemptionRate: '100 pts = USD 1',
+            maxRedeemablePercent: 30,
+            availablePoints: 15200,
+            maxAllowedPoints: 3870,
+          },
+        })),
+      confirmReservation: jest.fn().mockImplementation((reservationId: string) => ({
         source: 'mock',
-        status: 'reserved',
+        reservationId,
+        status: 'confirmed',
         currency: 'USD',
-        requestedPoints: payload.requestedPoints ?? 0,
-        reservedPoints: payload.requestedPoints ?? 0,
+        requestedPoints: 2000,
+        reservedPoints: 2000,
         coveredUsd: 20,
         payableUsd: 109,
-        message: 'mock reserve',
+        message: 'mock confirm',
+        rulesApplied: {
+          minRedeemPoints: 500,
+          redemptionRate: '100 pts = USD 1',
+          maxRedeemablePercent: 30,
+          availablePoints: 15200,
+          maxAllowedPoints: 3870,
+        },
+      })),
+      cancelReservation: jest.fn().mockImplementation((reservationId: string) => ({
+        source: 'mock',
+        reservationId,
+        status: 'cancelled',
+        currency: 'USD',
+        requestedPoints: 2000,
+        reservedPoints: 2000,
+        coveredUsd: 20,
+        payableUsd: 109,
+        message: 'mock cancel',
         rulesApplied: {
           minRedeemPoints: 500,
           redemptionRate: '100 pts = USD 1',
@@ -94,12 +134,56 @@ describe('StorefrontController', () => {
     ).toEqual({
       source: 'mock',
       status: 'reserved',
+      reservationId: 'rsv_test',
+      expiresAt: '2026-06-04T18:15:00.000Z',
       currency: 'USD',
       requestedPoints: 2000,
       reservedPoints: 2000,
       coveredUsd: 20,
       payableUsd: 109,
       message: 'mock reserve',
+      rulesApplied: {
+        minRedeemPoints: 500,
+        redemptionRate: '100 pts = USD 1',
+        maxRedeemablePercent: 30,
+        availablePoints: 15200,
+        maxAllowedPoints: 3870,
+      },
+    });
+  });
+
+  it('returns storefront confirm payload', () => {
+    expect(storefrontController.confirmReservation('rsv_test')).toEqual({
+      source: 'mock',
+      reservationId: 'rsv_test',
+      status: 'confirmed',
+      currency: 'USD',
+      requestedPoints: 2000,
+      reservedPoints: 2000,
+      coveredUsd: 20,
+      payableUsd: 109,
+      message: 'mock confirm',
+      rulesApplied: {
+        minRedeemPoints: 500,
+        redemptionRate: '100 pts = USD 1',
+        maxRedeemablePercent: 30,
+        availablePoints: 15200,
+        maxAllowedPoints: 3870,
+      },
+    });
+  });
+
+  it('returns storefront cancel payload', () => {
+    expect(storefrontController.cancelReservation('rsv_test')).toEqual({
+      source: 'mock',
+      reservationId: 'rsv_test',
+      status: 'cancelled',
+      currency: 'USD',
+      requestedPoints: 2000,
+      reservedPoints: 2000,
+      coveredUsd: 20,
+      payableUsd: 109,
+      message: 'mock cancel',
       rulesApplied: {
         minRedeemPoints: 500,
         redemptionRate: '100 pts = USD 1',

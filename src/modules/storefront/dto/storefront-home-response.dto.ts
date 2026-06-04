@@ -122,6 +122,34 @@ export interface StorefrontCartQuoteResponseDto {
   source: 'mock';
 }
 
+export type StorefrontReservationStatus =
+  | 'reserved'
+  | 'confirmed'
+  | 'cancelled'
+  | 'rejected';
+
+export interface StorefrontReservationRulesAppliedDto {
+  minRedeemPoints: number;
+  redemptionRate: '100 pts = USD 1';
+  maxRedeemablePercent: 30;
+  availablePoints: number;
+  maxAllowedPoints: number;
+}
+
+export interface StorefrontReservationStateResponseDto {
+  source: 'mock';
+  reservationId: string;
+  status: 'reserved' | 'confirmed' | 'cancelled';
+  expiresAt?: string;
+  currency: 'USD';
+  requestedPoints: number;
+  reservedPoints: number;
+  coveredUsd: number;
+  payableUsd: number;
+  message: string;
+  rulesApplied: StorefrontReservationRulesAppliedDto;
+}
+
 export interface StorefrontReserveResponseDto {
   source: 'mock';
   status: 'reserved' | 'rejected';
@@ -133,11 +161,5 @@ export interface StorefrontReserveResponseDto {
   coveredUsd: number;
   payableUsd: number;
   message: string;
-  rulesApplied: {
-    minRedeemPoints: number;
-    redemptionRate: '100 pts = USD 1';
-    maxRedeemablePercent: 30;
-    availablePoints: number;
-    maxAllowedPoints: number;
-  };
+  rulesApplied: StorefrontReservationRulesAppliedDto;
 }
