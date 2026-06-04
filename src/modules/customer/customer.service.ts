@@ -3,13 +3,14 @@ import { CoreCustomerClient } from './clients/core-customer.client';
 import { CustomerEnrollmentTraceService } from './services/customer-enrollment-trace.service';
 import { CustomerPasswordChangeService } from './services/customer-password-change.service';
 import { CustomerLoginService } from './services/customer-login.service';
+import { CustomerProfileSummaryService } from './services/customer-profile-summary.service';
 import {
   customerHomeMock,
-  customerProfileSummaryMock,
   customerWalletMock,
 } from './mocks/customer.mock';
 import type { CustomerHomeResponseDto } from './dto/customer-home-response.dto';
 import type { CustomerProfileSummaryResponseDto } from './dto/customer-profile-summary-response.dto';
+import type { CustomerProfileSummaryQueryDto } from './dto/customer-profile-summary-query.dto';
 import type { CustomerWalletResponseDto } from './dto/customer-wallet-response.dto';
 import type { IntegrationStatusDto } from '../../common/dto/integration-status.dto';
 import type { CustomerEnrollmentRequestDto } from './dto/customer-enrollment-request.dto';
@@ -36,6 +37,7 @@ export class CustomerService {
     private readonly customerEnrollmentTraceService: CustomerEnrollmentTraceService,
     private readonly customerPasswordChangeService: CustomerPasswordChangeService,
     private readonly customerLoginService: CustomerLoginService,
+    private readonly customerProfileSummaryService: CustomerProfileSummaryService,
   ) {}
 
   async getHome(): Promise<CustomerHomeResponseDto> {
@@ -50,16 +52,10 @@ export class CustomerService {
     };
   }
 
-  async getProfileSummary(): Promise<CustomerProfileSummaryResponseDto> {
-    const coreStatus = await this.coreCustomerClient.ping();
-
-    return {
-      ...customerProfileSummaryMock,
-      source: this.resolveSource(coreStatus),
-      integrations: {
-        coreCustomer: coreStatus,
-      },
-    };
+  async getProfileSummary(
+    query: CustomerProfileSummaryQueryDto = {},
+  ): Promise<CustomerProfileSummaryResponseDto> {
+    return this.customerProfileSummaryService.getProfileSummary(query);
   }
 
   async getWallet(): Promise<CustomerWalletResponseDto> {
@@ -98,7 +94,19 @@ export class CustomerService {
   async registerEnrollment(
     input: CustomerEnrollmentRequestDto,
   ): Promise<CustomerEnrollmentReceiptDto> {
-    return this.customerEnrollmentTraceService.register(input);
+    const enrollment = await this.customerEnrollmentTraceService.register(input);
+    const passwordSetup = await this.customerPasswordChangeService.register({
+      transactionId: enrollment.transactionId,
+    });
+
+    return {
+      ...enrollment,
+      passwordSetup: {
+        requestId: passwordSetup.requestId,
+        accepted: passwordSetup.outcome.accepted,
+        nextStep: passwordSetup.outcome.accepted ? 'go_to_login' : 'retry_password_setup',
+      },
+    };
   }
 
   async registerPasswordChange(

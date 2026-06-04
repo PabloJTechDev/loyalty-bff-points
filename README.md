@@ -4,6 +4,18 @@ Experience-oriented BFF for the **customer** side of the loyalty platform.
 
 This service exists to keep the frontend focused on UX while isolating it from core-level contracts and backend composition details.
 
+The current minimum slice also exposes mock storefront endpoints so the frontend can move on catalog-oriented flows without waiting for a dedicated commerce backend.
+
+Part of the ecosystem:
+
+- `loyalty-web` → customer-facing frontend in **Next.js**
+- `loyalty-bff-customer` → experience-oriented BFF in **NestJS**
+- `loyalty-core-customer` → technical core service in **Go + Postgres**
+
+```text
+Next.js web → NestJS BFF → Go core service + Postgres traces
+```
+
 ---
 
 ## What this service is responsible for
@@ -59,6 +71,14 @@ Reusable technical context:
 - `GET /api/v1/customer/profile-summary`
 - `GET /api/v1/customer/wallet`
 
+### Storefront mock slice
+- `GET /api/v1/storefront/home`
+- `GET /api/v1/storefront/categories`
+- `GET /api/v1/storefront/products`
+- `GET /api/v1/storefront/products?categoryId=electronics`
+- `GET /api/v1/storefront/products/:productId`
+- `POST /api/v1/storefront/cart/quote`
+
 ### Journey orchestration
 - `POST /api/v1/customer/enrollment`
 - `GET /api/v1/customer/enrollment-traces`
@@ -89,6 +109,15 @@ Today this service uses:
 - real integration with `loyalty-core-customer` for journey handoff and lookup
 
 This is intentional: it keeps the portfolio slice realistic enough to demonstrate architecture and traceability without pretending the full domain is already implemented.
+
+---
+
+## Related repositories
+
+- `loyalty-web` → presentation layer that consumes this BFF
+- `loyalty-core-customer` → technical core service used for journey handoff and trace lookup
+
+This repo is intentionally centered on orchestration, not on full domain ownership.
 
 ---
 
@@ -133,6 +162,7 @@ npm test
 Latest validated status:
 
 - `npm test` ✅
+- `npm run test:e2e` ✅
 - `npm run build` ✅
 
 Existing tests already cover:
@@ -141,6 +171,7 @@ Existing tests already cover:
 - error when enrollment trace is missing
 - error when password change trace is missing
 - degraded behavior when the core is unavailable
+- storefront home/products/product detail/cart quote mock slice
 
 ---
 
@@ -158,6 +189,8 @@ Related docs:
 - `../docs/architecture/architecture-decision.md`
 - `../docs/architecture/customer-experience-map.md`
 - `../docs/architecture/core-customer-contract.md`
+
+Note: broader ecosystem/case-study docs currently live outside this repo and are not duplicated here yet.
 
 ---
 

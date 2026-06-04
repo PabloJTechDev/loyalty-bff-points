@@ -24,6 +24,11 @@ export interface CustomerEnrollmentReceiptDto extends CustomerEnrollmentTraceDto
     emailHash: string;
     shownOnce: true;
   };
+  passwordSetup?: {
+    requestId: string;
+    accepted: boolean;
+    nextStep: 'go_to_login' | 'retry_password_setup';
+  };
 }
 
 export interface CustomerEnrollmentTraceListResponseDto {

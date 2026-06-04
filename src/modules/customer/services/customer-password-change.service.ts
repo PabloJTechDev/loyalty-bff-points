@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto';
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { logEvent } from '../../../common/logging/json-log';
+import { businessTransactionsTotal } from '../../../common/metrics/http-metrics';
 import { CoreCustomerClient } from '../clients/core-customer.client';
 import { CustomerEnrollmentTraceService } from './customer-enrollment-trace.service';
 import type {
@@ -41,6 +43,12 @@ export class CustomerPasswordChangeService {
     const requestId = `pwd_${randomUUID()}`;
     const coreCustomer = await this.coreCustomerClient.ping();
 
+    logEvent('password-change.register.started', {
+      requestId,
+      transactionId,
+      coreAvailable: coreCustomer.available,
+    });
+
     const trace: CustomerPasswordChangeTraceDto = {
       requestId,
       transactionId,
@@ -66,12 +74,29 @@ export class CustomerPasswordChangeService {
         deliveredAt: new Date().toISOString(),
         responseStatusCode: handoff.statusCode,
       };
+      logEvent('password-change.register.handoff', {
+        requestId,
+        transactionId,
+        status: trace.handoff.status,
+        statusCode: trace.handoff.responseStatusCode,
+      });
     }
+
+    businessTransactionsTotal.inc({
+      flow: 'password_change',
+      outcome: trace.handoff.status,
+    });
 
     this.traces.unshift(trace);
     if (this.traces.length > 20) {
       this.traces.length = 20;
     }
+
+    logEvent('password-change.register.completed', {
+      requestId,
+      transactionId,
+      handoffStatus: trace.handoff.status,
+    });
 
     return {
       ...trace,

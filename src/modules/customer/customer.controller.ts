@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { CustomerService } from './customer.service';
 import type { CustomerHomeResponseDto } from './dto/customer-home-response.dto';
 import type { CustomerProfileSummaryResponseDto } from './dto/customer-profile-summary-response.dto';
+import type { CustomerProfileSummaryQueryDto } from './dto/customer-profile-summary-query.dto';
 import type { CustomerWalletResponseDto } from './dto/customer-wallet-response.dto';
 import type { CustomerEnrollmentRequestDto } from './dto/customer-enrollment-request.dto';
 import type {
@@ -30,8 +31,10 @@ export class CustomerController {
   }
 
   @Get('profile-summary')
-  getProfileSummary(): Promise<CustomerProfileSummaryResponseDto> {
-    return this.customerService.getProfileSummary();
+  getProfileSummary(
+    @Query() query: CustomerProfileSummaryQueryDto,
+  ): Promise<CustomerProfileSummaryResponseDto> {
+    return this.customerService.getProfileSummary(query);
   }
 
   @Get('wallet')

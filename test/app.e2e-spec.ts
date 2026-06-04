@@ -28,4 +28,81 @@ describe('AppController (e2e)', () => {
       .expect(200)
       .expect({ status: 'ok', service: 'bff-customer' });
   });
+
+  it('/api/v1/storefront/home (GET)', async () => {
+    const httpServer = app.getHttpServer() as Parameters<typeof request>[0];
+
+    const response = await request(httpServer)
+      .get('/api/v1/storefront/home')
+      .expect(200);
+
+    expect(response.body.source).toBe('mock');
+    expect(response.body.hero.title).toContain('Storefront');
+    expect(Array.isArray(response.body.featuredProducts)).toBe(true);
+    expect(response.body.featuredProducts.length).toBeGreaterThan(0);
+  });
+
+  it('/api/v1/storefront/products?categoryId=electronics (GET)', async () => {
+    const httpServer = app.getHttpServer() as Parameters<typeof request>[0];
+
+    const response = await request(httpServer)
+      .get('/api/v1/storefront/products')
+      .query({ categoryId: 'electronics' })
+      .expect(200);
+
+    expect(response.body.source).toBe('mock');
+    expect(response.body.total).toBe(1);
+    expect(response.body.items[0]).toMatchObject({
+      categoryId: 'electronics',
+    });
+  });
+
+  it('/api/v1/storefront/products/:productId (GET)', async () => {
+    const httpServer = app.getHttpServer() as Parameters<typeof request>[0];
+
+    const response = await request(httpServer)
+      .get('/api/v1/storefront/products/prod_headphones')
+      .expect(200);
+
+    expect(response.body.source).toBe('mock');
+    expect(response.body.item).toMatchObject({
+      id: 'prod_headphones',
+      redemption: {
+        minRedeemPoints: 500,
+        redemptionRate: '100 pts = USD 1',
+        maxRedeemablePercent: 30,
+      },
+    });
+  });
+
+  it('/api/v1/storefront/cart/quote (POST)', async () => {
+    const httpServer = app.getHttpServer() as Parameters<typeof request>[0];
+
+    const response = await request(httpServer)
+      .post('/api/v1/storefront/cart/quote')
+      .send({
+        items: [
+          { productId: 'prod_headphones', quantity: 1 },
+          { productId: 'prod_backpack', quantity: 2 },
+        ],
+      })
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      currency: 'USD',
+      itemCount: 3,
+      subtotalUsd: 247,
+      maxRedeemableUsd: 74.1,
+      maxRedeemablePoints: 7410,
+      payableUsdAfterMaxRedemption: 172.9,
+      source: 'mock',
+      redemption: {
+        minRedeemPoints: 500,
+        minRedeemableUsd: 5,
+        redemptionRate: '100 pts = USD 1',
+        maxRedeemablePercent: 30,
+        redemptionAvailable: true,
+      },
+    });
+  });
 });

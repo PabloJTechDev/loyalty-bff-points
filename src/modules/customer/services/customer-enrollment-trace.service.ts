@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from 'crypto';
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { logEvent } from '../../../common/logging/json-log';
+import { businessTransactionsTotal } from '../../../common/metrics/http-metrics';
 import { CoreCustomerClient } from '../clients/core-customer.client';
 import type {
   CustomerEnrollmentReceiptDto,
@@ -20,10 +22,17 @@ export class CustomerEnrollmentTraceService {
     input: CustomerEnrollmentRequestDto = {},
   ): Promise<CustomerEnrollmentReceiptDto> {
     const email = this.normalizeEmail(input.email);
+    this.validatePasswordSetup(input.password, input.confirmPassword);
     const createdAt = new Date().toISOString();
     const transactionId = `txn_${randomUUID()}`;
     const emailHash = createHash('sha256').update(email).digest('hex');
     const coreCustomer = await this.coreCustomerClient.ping();
+
+    logEvent('enrollment.register.started', {
+      transactionId,
+      email,
+      coreAvailable: coreCustomer.available,
+    });
 
     const trace: CustomerEnrollmentTraceDto = {
       transactionId,
@@ -52,12 +61,28 @@ export class CustomerEnrollmentTraceService {
         deliveredAt: new Date().toISOString(),
         responseStatusCode: handoff.statusCode,
       };
+      logEvent('enrollment.register.handoff', {
+        transactionId,
+        status: trace.handoff.status,
+        statusCode: trace.handoff.responseStatusCode,
+      });
     }
+
+    businessTransactionsTotal.inc({
+      flow: 'enrollment',
+      outcome: trace.handoff.status,
+    });
 
     this.traces.unshift(trace);
     if (this.traces.length > 20) {
       this.traces.length = 20;
     }
+
+    logEvent('enrollment.register.completed', {
+      transactionId,
+      emailHash,
+      handoffStatus: trace.handoff.status,
+    });
 
     return {
       ...trace,
@@ -99,5 +124,22 @@ export class CustomerEnrollmentTraceService {
   private normalizeEmail(email?: string): string {
     const candidate = email?.trim().toLowerCase();
     return candidate && candidate.includes('@') ? candidate : this.defaultEmail;
+  }
+
+  private validatePasswordSetup(password?: string, confirmPassword?: string) {
+    const normalizedPassword = password?.trim() ?? '';
+    const normalizedConfirmPassword = confirmPassword?.trim() ?? '';
+
+    if (!normalizedPassword || !normalizedConfirmPassword) {
+      throw new BadRequestException('password and confirmPassword are required');
+    }
+
+    if (normalizedPassword.length < 8) {
+      throw new BadRequestException('password must contain at least 8 characters');
+    }
+
+    if (normalizedPassword !== normalizedConfirmPassword) {
+      throw new BadRequestException('password and confirmPassword must match');
+    }
   }
 }

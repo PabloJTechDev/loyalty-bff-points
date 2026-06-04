@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto';
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { logEvent } from '../../../common/logging/json-log';
+import { businessTransactionsTotal } from '../../../common/metrics/http-metrics';
 import { CoreCustomerClient } from '../clients/core-customer.client';
 import { CustomerPasswordChangeService } from './customer-password-change.service';
 import { customerProfileSummaryMock } from '../mocks/customer.mock';
@@ -42,6 +44,13 @@ export class CustomerLoginService {
     const loginId = `login_${randomUUID()}`;
     const coreCustomer = await this.coreCustomerClient.ping();
 
+    logEvent('login.register.started', {
+      loginId,
+      requestId,
+      transactionId: passwordChange.trace.transactionId,
+      coreAvailable: coreCustomer.available,
+    });
+
     const trace: CustomerLoginTraceDto = {
       loginId,
       requestId,
@@ -79,12 +88,31 @@ export class CustomerLoginService {
         authenticatedAt: new Date().toISOString(),
         responseStatusCode: handoff.statusCode,
       };
+      logEvent('login.register.handoff', {
+        loginId,
+        requestId,
+        transactionId: trace.transactionId,
+        status: trace.session.status,
+        statusCode: trace.session.responseStatusCode,
+      });
     }
+
+    businessTransactionsTotal.inc({
+      flow: 'login',
+      outcome: trace.session.status,
+    });
 
     this.traces.unshift(trace);
     if (this.traces.length > 20) {
       this.traces.length = 20;
     }
+
+    logEvent('login.register.completed', {
+      loginId,
+      requestId,
+      transactionId: trace.transactionId,
+      sessionStatus: trace.session.status,
+    });
 
     return {
       ...trace,

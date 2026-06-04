@@ -7,6 +7,7 @@ import type { IntegrationStatusDto } from '../../../common/dto/integration-statu
 import type { CustomerEnrollmentCoreRecordDto } from '../dto/customer-enrollment-trace.dto';
 import type { CustomerPasswordChangeCoreRecordDto } from '../dto/customer-password-change.dto';
 import type { CustomerLoginCoreRecordDto } from '../dto/customer-login.dto';
+import type { CustomerProfileSummaryCoreResponseDto } from '../dto/customer-profile-summary-response.dto';
 
 interface EnrollmentPayload {
   transactionId: string;
@@ -222,6 +223,29 @@ export class CoreCustomerClient {
       );
 
       return response.data as CustomerLoginCoreRecordDto;
+    } catch (error) {
+      if (error instanceof AxiosError && error.response?.status === 404) {
+        return null;
+      }
+
+      return null;
+    }
+  }
+
+  async getProfileSummaryByCustomerId(
+    customerId: string,
+  ): Promise<CustomerProfileSummaryCoreResponseDto | null> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(
+          `${this.baseUrl}/v1/customers/${encodeURIComponent(customerId)}/profile-summary`,
+          {
+            timeout: 1500,
+          },
+        ),
+      );
+
+      return response.data as CustomerProfileSummaryCoreResponseDto;
     } catch (error) {
       if (error instanceof AxiosError && error.response?.status === 404) {
         return null;

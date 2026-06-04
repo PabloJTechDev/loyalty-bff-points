@@ -62,6 +62,8 @@ describe('Customer journey services', () => {
   it('completes enrollment -> password change -> login reusing the same technical context', async () => {
     const enrollmentReceipt = await enrollmentService.register({
       email: 'Pablo@Example.com ',
+      password: 'DemoPass123',
+      confirmPassword: 'DemoPass123',
     });
 
     expect(enrollmentReceipt.transactionId).toMatch(/^txn_/);
@@ -138,6 +140,8 @@ describe('Customer journey services', () => {
 
     const receipt = await enrollmentService.register({
       email: 'fallback@example.com',
+      password: 'DemoPass123',
+      confirmPassword: 'DemoPass123',
     });
 
     expect(receipt.handoff.status).toBe('pending_core');
