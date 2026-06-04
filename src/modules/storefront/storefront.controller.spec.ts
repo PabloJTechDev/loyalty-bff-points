@@ -24,6 +24,23 @@ describe('StorefrontController', () => {
         items: payload.items,
         source: 'mock',
       })),
+      reserve: jest.fn().mockImplementation((payload: { items: unknown[]; requestedPoints?: number }) => ({
+        source: 'mock',
+        status: 'reserved',
+        currency: 'USD',
+        requestedPoints: payload.requestedPoints ?? 0,
+        reservedPoints: payload.requestedPoints ?? 0,
+        coveredUsd: 20,
+        payableUsd: 109,
+        message: 'mock reserve',
+        rulesApplied: {
+          minRedeemPoints: 500,
+          redemptionRate: '100 pts = USD 1',
+          maxRedeemablePercent: 30,
+          availablePoints: 15200,
+          maxAllowedPoints: 3870,
+        },
+      })),
     } as unknown as StorefrontService;
 
     storefrontController = new StorefrontController(storefrontService);
@@ -65,6 +82,31 @@ describe('StorefrontController', () => {
       currency: 'USD',
       items: [{ productId: 'prod_headphones', quantity: 1 }],
       source: 'mock',
+    });
+  });
+
+  it('returns storefront reserve payload', () => {
+    expect(
+      storefrontController.reserve({
+        items: [{ productId: 'prod_headphones', quantity: 1 }],
+        requestedPoints: 2000,
+      }),
+    ).toEqual({
+      source: 'mock',
+      status: 'reserved',
+      currency: 'USD',
+      requestedPoints: 2000,
+      reservedPoints: 2000,
+      coveredUsd: 20,
+      payableUsd: 109,
+      message: 'mock reserve',
+      rulesApplied: {
+        minRedeemPoints: 500,
+        redemptionRate: '100 pts = USD 1',
+        maxRedeemablePercent: 30,
+        availablePoints: 15200,
+        maxAllowedPoints: 3870,
+      },
     });
   });
 });

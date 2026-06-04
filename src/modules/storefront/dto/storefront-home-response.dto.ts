@@ -78,6 +78,21 @@ export interface StorefrontCartQuoteRequestDto {
   items: StorefrontCartQuoteRequestItemDto[];
 }
 
+export interface StorefrontReserveRequestLineDto {
+  productId: string;
+  quantity: number;
+}
+
+export interface StorefrontReserveRequestDto {
+  items?: StorefrontCartQuoteRequestItemDto[];
+  lines?: StorefrontReserveRequestLineDto[];
+  requestedPoints?: number;
+  appliedPoints?: number;
+  availablePoints?: number;
+  subtotalUsd?: number;
+  currency?: 'USD';
+}
+
 export interface StorefrontCartQuoteItemDto {
   productId: string;
   sku: string;
@@ -105,4 +120,24 @@ export interface StorefrontCartQuoteResponseDto {
     redemptionAvailable: boolean;
   };
   source: 'mock';
+}
+
+export interface StorefrontReserveResponseDto {
+  source: 'mock';
+  status: 'reserved' | 'rejected';
+  reservationId?: string;
+  expiresAt?: string;
+  currency: 'USD';
+  requestedPoints: number;
+  reservedPoints: number;
+  coveredUsd: number;
+  payableUsd: number;
+  message: string;
+  rulesApplied: {
+    minRedeemPoints: number;
+    redemptionRate: '100 pts = USD 1';
+    maxRedeemablePercent: 30;
+    availablePoints: number;
+    maxAllowedPoints: number;
+  };
 }

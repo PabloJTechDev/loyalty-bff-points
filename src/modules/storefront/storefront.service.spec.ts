@@ -111,4 +111,49 @@ describe('StorefrontService', () => {
       }),
     ).toThrow(NotFoundException);
   });
+
+  it('creates a mock reservation when the quote meets reserve rules', () => {
+    const response = service.reserve({
+      items: [{ productId: 'prod_headphones', quantity: 1 }],
+      requestedPoints: 2000,
+      availablePoints: 15200,
+    });
+
+    expect(response).toMatchObject({
+      source: 'mock',
+      status: 'reserved',
+      currency: 'USD',
+      requestedPoints: 2000,
+      reservedPoints: 2000,
+      coveredUsd: 20,
+      payableUsd: 109,
+      rulesApplied: {
+        minRedeemPoints: 500,
+        redemptionRate: '100 pts = USD 1',
+        maxRedeemablePercent: 30,
+        availablePoints: 15200,
+        maxAllowedPoints: 3870,
+      },
+    });
+    expect(response.reservationId).toMatch(/^rsv_/);
+    expect(response.expiresAt).toBeTruthy();
+  });
+
+  it('rejects reservation when requested points do not meet minimum rules', () => {
+    const response = service.reserve({
+      items: [{ productId: 'prod_headphones', quantity: 1 }],
+      requestedPoints: 300,
+      availablePoints: 15200,
+    });
+
+    expect(response).toMatchObject({
+      source: 'mock',
+      status: 'rejected',
+      currency: 'USD',
+      requestedPoints: 300,
+      reservedPoints: 0,
+      coveredUsd: 0,
+      payableUsd: 129,
+    });
+  });
 });

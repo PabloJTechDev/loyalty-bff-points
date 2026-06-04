@@ -17,6 +17,8 @@ import type {
   StorefrontProductsQueryDto,
   StorefrontProductsResponseDto,
   StorefrontCategoriesResponseDto,
+  StorefrontReserveRequestDto,
+  StorefrontReserveResponseDto,
 } from './dto/storefront-home-response.dto';
 
 @Injectable()
@@ -66,33 +68,71 @@ export class StorefrontService {
   }
 
   getCartQuote(payload: StorefrontCartQuoteRequestDto): StorefrontCartQuoteResponseDto {
-    const normalizedItems = payload.items
-      .filter((item) => Number.isFinite(item.quantity) && item.quantity > 0)
-      .map((item) => {
-        const product = storefrontProductsMock.find(
-          (candidate) => candidate.id === item.productId,
-        );
+    const normalizedItems = this.normalizeQuoteItems(payload.items);
 
-        if (!product) {
-          throw new NotFoundException(
-            `Storefront product ${item.productId} not found`,
-          );
-        }
+    return this.buildQuoteFromNormalizedItems(normalizedItems);
+  }
 
-        const lineSubtotalUsd = this.roundUsd(product.priceUsd * item.quantity);
+  reserve(payload: StorefrontReserveRequestDto): StorefrontReserveResponseDto {
+    const quoteItems = payload.items ?? payload.lines ?? [];
+    const quote = this.getCartQuote({ items: quoteItems });
+    const maxAllowedPointsFromWallet = Number.isFinite(payload.availablePoints)
+      ? Math.max(0, Math.floor(payload.availablePoints ?? 0))
+      : quote.maxRedeemablePoints;
+    const maxAllowedPoints = Math.min(
+      quote.maxRedeemablePoints,
+      maxAllowedPointsFromWallet,
+    );
+    const requestedPointsInput = Number.isFinite(payload.requestedPoints)
+      ? Math.max(0, Math.floor(payload.requestedPoints ?? 0))
+      : Number.isFinite(payload.appliedPoints)
+        ? Math.max(0, Math.floor(payload.appliedPoints ?? 0))
+        : maxAllowedPoints;
+    const reservedPoints =
+      quote.redemption.redemptionAvailable &&
+      requestedPointsInput >= STOREFRONT_MIN_REDEEM_POINTS &&
+      maxAllowedPoints >= STOREFRONT_MIN_REDEEM_POINTS
+        ? Math.min(requestedPointsInput, maxAllowedPoints)
+        : 0;
+    const coveredUsd = this.roundUsd(reservedPoints / STOREFRONT_REDEMPTION_RATE);
+    const payableUsd = this.roundUsd(Math.max(0, quote.subtotalUsd - coveredUsd));
+    const status = reservedPoints >= STOREFRONT_MIN_REDEEM_POINTS ? 'reserved' : 'rejected';
 
-        return {
-          productId: product.id,
-          sku: product.sku,
-          name: product.name,
-          quantity: item.quantity,
-          unitPriceUsd: product.priceUsd,
-          lineSubtotalUsd,
-          categoryId: product.categoryId,
-          categoryName: product.categoryName,
-        };
-      });
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
 
+    return {
+      source: 'mock',
+      status,
+      reservationId:
+        status === 'reserved'
+          ? `rsv_${now.getTime().toString(36)}`
+          : undefined,
+      expiresAt: status === 'reserved' ? expiresAt : undefined,
+      currency: 'USD',
+      requestedPoints: requestedPointsInput,
+      reservedPoints,
+      coveredUsd,
+      payableUsd,
+      message:
+        status === 'reserved'
+          ? 'Points reserved successfully using the mock storefront reserve flow.'
+          : quote.items.length === 0
+            ? 'Cart is empty. Add at least one item before reserving points.'
+            : `At least ${STOREFRONT_MIN_REDEEM_POINTS} points must be applied and available before reserving.`,
+      rulesApplied: {
+        minRedeemPoints: STOREFRONT_MIN_REDEEM_POINTS,
+        redemptionRate: STOREFRONT_REDEMPTION_RATE_LABEL,
+        maxRedeemablePercent: STOREFRONT_MAX_REDEEMABLE_PERCENT,
+        availablePoints: maxAllowedPointsFromWallet,
+        maxAllowedPoints,
+      },
+    };
+  }
+
+  private buildQuoteFromNormalizedItems(
+    normalizedItems: StorefrontCartQuoteResponseDto['items'],
+  ): StorefrontCartQuoteResponseDto {
     const subtotalUsd = this.roundUsd(
       normalizedItems.reduce((acc, item) => acc + item.lineSubtotalUsd, 0),
     );
@@ -127,8 +167,38 @@ export class StorefrontService {
     };
   }
 
+  private normalizeQuoteItems(
+    items: StorefrontCartQuoteRequestDto['items'],
+  ): StorefrontCartQuoteResponseDto['items'] {
+    return items
+      .filter((item) => Number.isFinite(item.quantity) && item.quantity > 0)
+      .map((item) => {
+        const product = storefrontProductsMock.find(
+          (candidate) => candidate.id === item.productId,
+        );
+
+        if (!product) {
+          throw new NotFoundException(
+            `Storefront product ${item.productId} not found`,
+          );
+        }
+
+        const lineSubtotalUsd = this.roundUsd(product.priceUsd * item.quantity);
+
+        return {
+          productId: product.id,
+          sku: product.sku,
+          name: product.name,
+          quantity: item.quantity,
+          unitPriceUsd: product.priceUsd,
+          lineSubtotalUsd,
+          categoryId: product.categoryId,
+          categoryName: product.categoryName,
+        };
+      });
+  }
+
   private roundUsd(value: number): number {
     return Number(value.toFixed(2));
   }
-
 }

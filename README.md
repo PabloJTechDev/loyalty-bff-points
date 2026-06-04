@@ -78,6 +78,7 @@ Reusable technical context:
 - `GET /api/v1/storefront/products?categoryId=electronics`
 - `GET /api/v1/storefront/products/:productId`
 - `POST /api/v1/storefront/cart/quote`
+- `POST /api/v1/storefront/redemptions/reserve`
 
 ### Journey orchestration
 - `POST /api/v1/customer/enrollment`

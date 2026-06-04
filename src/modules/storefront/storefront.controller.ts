@@ -8,6 +8,8 @@ import type {
   StorefrontProductDetailResponseDto,
   StorefrontProductsQueryDto,
   StorefrontProductsResponseDto,
+  StorefrontReserveRequestDto,
+  StorefrontReserveResponseDto,
 } from './dto/storefront-home-response.dto';
 
 @Controller('v1/storefront')
@@ -43,5 +45,12 @@ export class StorefrontController {
     @Body() payload: StorefrontCartQuoteRequestDto,
   ): StorefrontCartQuoteResponseDto {
     return this.storefrontService.getCartQuote(payload);
+  }
+
+  @Post('redemptions/reserve')
+  reserve(
+    @Body() payload: StorefrontReserveRequestDto,
+  ): StorefrontReserveResponseDto {
+    return this.storefrontService.reserve(payload);
   }
 }

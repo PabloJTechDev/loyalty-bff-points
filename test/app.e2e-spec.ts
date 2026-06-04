@@ -105,4 +105,36 @@ describe('AppController (e2e)', () => {
       },
     });
   });
+
+  it('/api/v1/storefront/redemptions/reserve (POST)', async () => {
+    const httpServer = app.getHttpServer() as Parameters<typeof request>[0];
+
+    const response = await request(httpServer)
+      .post('/api/v1/storefront/redemptions/reserve')
+      .send({
+        items: [{ productId: 'prod_headphones', quantity: 1 }],
+        requestedPoints: 2000,
+        availablePoints: 15200,
+      })
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      source: 'mock',
+      status: 'reserved',
+      currency: 'USD',
+      requestedPoints: 2000,
+      reservedPoints: 2000,
+      coveredUsd: 20,
+      payableUsd: 109,
+      rulesApplied: {
+        minRedeemPoints: 500,
+        redemptionRate: '100 pts = USD 1',
+        maxRedeemablePercent: 30,
+        availablePoints: 15200,
+        maxAllowedPoints: 3870,
+      },
+    });
+    expect(response.body.reservationId).toMatch(/^rsv_/);
+    expect(response.body.expiresAt).toBeTruthy();
+  });
 });
