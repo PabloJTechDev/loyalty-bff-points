@@ -238,4 +238,84 @@ describe('StorefrontService', () => {
       NotFoundException,
     );
   });
+
+  it('places an order after the reservation is confirmed', () => {
+    const reservation = service.reserve({
+      items: [{ productId: 'prod_headphones', quantity: 1 }],
+      requestedPoints: 2000,
+      availablePoints: 15200,
+    });
+
+    service.confirmReservation(reservation.reservationId!);
+
+    const order = service.placeOrder({
+      reservationId: reservation.reservationId,
+      items: [{ productId: 'prod_headphones', quantity: 1 }],
+      requestedPoints: 2000,
+      reservedPoints: 2000,
+      coveredUsd: 20,
+      payableUsd: 109,
+    });
+
+    expect(order).toMatchObject({
+      source: 'mock',
+      reservationId: reservation.reservationId,
+      status: 'placed',
+      currency: 'USD',
+      summary: {
+        itemCount: 1,
+        subtotalUsd: 129,
+        requestedPoints: 2000,
+        reservedPoints: 2000,
+        coveredUsd: 20,
+        payableUsd: 109,
+      },
+    });
+    expect(order.orderId).toMatch(/^ord_/);
+    expect(order.lines).toHaveLength(1);
+
+    const fetched = service.getOrderById(order.orderId);
+    expect(fetched.orderId).toBe(order.orderId);
+    expect(fetched.reservationId).toBe(reservation.reservationId);
+  });
+
+  it('blocks order placement when reservation is not confirmed', () => {
+    const reservation = service.reserve({
+      items: [{ productId: 'prod_headphones', quantity: 1 }],
+      requestedPoints: 2000,
+      availablePoints: 15200,
+    });
+
+    expect(() =>
+      service.placeOrder({
+        reservationId: reservation.reservationId,
+        items: [{ productId: 'prod_headphones', quantity: 1 }],
+      }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('prevents placing duplicated orders for the same reservation', () => {
+    const reservation = service.reserve({
+      items: [{ productId: 'prod_headphones', quantity: 1 }],
+      requestedPoints: 2000,
+      availablePoints: 15200,
+    });
+
+    service.confirmReservation(reservation.reservationId!);
+    service.placeOrder({
+      reservationId: reservation.reservationId,
+      items: [{ productId: 'prod_headphones', quantity: 1 }],
+    });
+
+    expect(() =>
+      service.placeOrder({
+        reservationId: reservation.reservationId,
+        items: [{ productId: 'prod_headphones', quantity: 1 }],
+      }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('throws not found when order does not exist', () => {
+    expect(() => service.getOrderById('ord_missing')).toThrow(NotFoundException);
+  });
 });

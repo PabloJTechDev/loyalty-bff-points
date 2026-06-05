@@ -163,3 +163,46 @@ export interface StorefrontReserveResponseDto {
   message: string;
   rulesApplied: StorefrontReservationRulesAppliedDto;
 }
+
+export interface StorefrontPlaceOrderRequestDto {
+  reservationId?: string;
+  items?: StorefrontCartQuoteRequestItemDto[];
+  lines?: StorefrontReserveRequestLineDto[];
+  requestedPoints?: number;
+  reservedPoints?: number;
+  coveredUsd?: number;
+  payableUsd?: number;
+  currency?: 'USD';
+}
+
+export interface StorefrontOrderLineDto {
+  productId: string;
+  sku: string;
+  name: string;
+  quantity: number;
+  unitPriceUsd: number;
+  lineSubtotalUsd: number;
+  categoryId: string;
+  categoryName: string;
+}
+
+export interface StorefrontOrderSummaryDto {
+  itemCount: number;
+  subtotalUsd: number;
+  requestedPoints: number;
+  reservedPoints: number;
+  coveredUsd: number;
+  payableUsd: number;
+}
+
+export interface StorefrontOrderResponseDto {
+  source: 'mock';
+  orderId: string;
+  reservationId: string;
+  status: 'placed';
+  currency: 'USD';
+  createdAt: string;
+  lines: StorefrontOrderLineDto[];
+  summary: StorefrontOrderSummaryDto;
+  message: string;
+}

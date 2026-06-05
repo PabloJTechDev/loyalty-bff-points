@@ -20,15 +20,22 @@ import type {
   StorefrontReserveRequestDto,
   StorefrontReserveResponseDto,
   StorefrontReservationStateResponseDto,
+  StorefrontPlaceOrderRequestDto,
+  StorefrontOrderResponseDto,
+  StorefrontOrderLineDto,
 } from './dto/storefront-home-response.dto';
 
 type MockReservationRecord = Omit<StorefrontReservationStateResponseDto, 'message'> & {
   createdAt: string;
 };
 
+type MockOrderRecord = Omit<StorefrontOrderResponseDto, 'message'>;
+
 @Injectable()
 export class StorefrontService {
   private readonly reservations = new Map<string, MockReservationRecord>();
+
+  private readonly orders = new Map<string, MockOrderRecord>();
 
   getHome(): StorefrontHomeResponseDto {
     return {
@@ -206,6 +213,94 @@ export class StorefrontService {
       reservation,
       'Reservation cancelled successfully using the mock storefront reserve flow.',
     );
+  }
+
+  placeOrder(payload: StorefrontPlaceOrderRequestDto): StorefrontOrderResponseDto {
+    if (!payload.reservationId) {
+      throw new BadRequestException('reservationId is required before placing an order.');
+    }
+
+    const reservation = this.getStoredReservation(payload.reservationId);
+
+    if (reservation.status !== 'confirmed') {
+      throw new BadRequestException(
+        `Reservation ${payload.reservationId} must be confirmed before placing an order.`,
+      );
+    }
+
+    const existingOrder = Array.from(this.orders.values()).find(
+      (order) => order.reservationId === payload.reservationId,
+    );
+
+    if (existingOrder) {
+      throw new BadRequestException(
+        `Order already placed for reservation ${payload.reservationId}.`,
+      );
+    }
+
+    const orderItems = payload.items ?? payload.lines ?? [];
+    const normalizedLines = this.normalizeQuoteItems(orderItems);
+
+    if (!normalizedLines.length) {
+      throw new BadRequestException('At least one order line is required before placing an order.');
+    }
+
+    const subtotalUsd = this.roundUsd(
+      normalizedLines.reduce((acc, item) => acc + item.lineSubtotalUsd, 0),
+    );
+    const requestedPoints = Number.isFinite(payload.requestedPoints)
+      ? Math.max(0, Math.floor(payload.requestedPoints ?? 0))
+      : reservation.requestedPoints;
+    const reservedPoints = Number.isFinite(payload.reservedPoints)
+      ? Math.max(0, Math.floor(payload.reservedPoints ?? 0))
+      : reservation.reservedPoints;
+    const coveredUsd = Number.isFinite(payload.coveredUsd)
+      ? this.roundUsd(payload.coveredUsd ?? 0)
+      : reservation.coveredUsd;
+    const payableUsd = Number.isFinite(payload.payableUsd)
+      ? this.roundUsd(payload.payableUsd ?? subtotalUsd)
+      : this.roundUsd(Math.max(0, subtotalUsd - coveredUsd));
+    const itemCount = normalizedLines.reduce((acc, item) => acc + item.quantity, 0);
+    const now = new Date();
+    const orderId = `ord_${now.getTime().toString(36)}_${this.orders.size + 1}`;
+
+    const order: MockOrderRecord = {
+      source: 'mock',
+      orderId,
+      reservationId: reservation.reservationId,
+      status: 'placed',
+      currency: 'USD',
+      createdAt: now.toISOString(),
+      lines: normalizedLines.map<StorefrontOrderLineDto>((line) => ({ ...line })),
+      summary: {
+        itemCount,
+        subtotalUsd,
+        requestedPoints,
+        reservedPoints,
+        coveredUsd,
+        payableUsd,
+      },
+    };
+
+    this.orders.set(orderId, order);
+
+    return {
+      ...order,
+      message: 'Order placed successfully using the mock storefront order flow.',
+    };
+  }
+
+  getOrderById(orderId: string): StorefrontOrderResponseDto {
+    const order = this.orders.get(orderId);
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} not found`);
+    }
+
+    return {
+      ...order,
+      message: 'Order loaded successfully using the mock storefront order flow.',
+    };
   }
 
   private getStoredReservation(reservationId: string): MockReservationRecord {

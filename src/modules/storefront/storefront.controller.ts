@@ -11,6 +11,8 @@ import type {
   StorefrontReserveRequestDto,
   StorefrontReserveResponseDto,
   StorefrontReservationStateResponseDto,
+  StorefrontPlaceOrderRequestDto,
+  StorefrontOrderResponseDto,
 } from './dto/storefront-home-response.dto';
 
 @Controller('v1/storefront')
@@ -67,5 +69,17 @@ export class StorefrontController {
     @Param('reservationId') reservationId: string,
   ): StorefrontReservationStateResponseDto {
     return this.storefrontService.cancelReservation(reservationId);
+  }
+
+  @Post('orders')
+  placeOrder(
+    @Body() payload: StorefrontPlaceOrderRequestDto,
+  ): StorefrontOrderResponseDto {
+    return this.storefrontService.placeOrder(payload);
+  }
+
+  @Get('orders/:orderId')
+  getOrderById(@Param('orderId') orderId: string): StorefrontOrderResponseDto {
+    return this.storefrontService.getOrderById(orderId);
   }
 }

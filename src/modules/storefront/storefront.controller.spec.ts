@@ -81,6 +81,42 @@ describe('StorefrontController', () => {
           maxAllowedPoints: 3870,
         },
       })),
+      placeOrder: jest.fn().mockImplementation((payload: { reservationId?: string }) => ({
+        source: 'mock',
+        orderId: 'ord_test',
+        reservationId: payload.reservationId,
+        status: 'placed',
+        currency: 'USD',
+        createdAt: '2026-06-05T10:00:00.000Z',
+        lines: [],
+        summary: {
+          itemCount: 1,
+          subtotalUsd: 129,
+          requestedPoints: 2000,
+          reservedPoints: 2000,
+          coveredUsd: 20,
+          payableUsd: 109,
+        },
+        message: 'mock order',
+      })),
+      getOrderById: jest.fn().mockImplementation((orderId: string) => ({
+        source: 'mock',
+        orderId,
+        reservationId: 'rsv_test',
+        status: 'placed',
+        currency: 'USD',
+        createdAt: '2026-06-05T10:00:00.000Z',
+        lines: [],
+        summary: {
+          itemCount: 1,
+          subtotalUsd: 129,
+          requestedPoints: 2000,
+          reservedPoints: 2000,
+          coveredUsd: 20,
+          payableUsd: 109,
+        },
+        message: 'mock order detail',
+      })),
     } as unknown as StorefrontService;
 
     storefrontController = new StorefrontController(storefrontService);
@@ -191,6 +227,53 @@ describe('StorefrontController', () => {
         availablePoints: 15200,
         maxAllowedPoints: 3870,
       },
+    });
+  });
+
+  it('returns storefront order placement payload', () => {
+    expect(
+      storefrontController.placeOrder({
+        reservationId: 'rsv_test',
+        items: [{ productId: 'prod_headphones', quantity: 1 }],
+      }),
+    ).toEqual({
+      source: 'mock',
+      orderId: 'ord_test',
+      reservationId: 'rsv_test',
+      status: 'placed',
+      currency: 'USD',
+      createdAt: '2026-06-05T10:00:00.000Z',
+      lines: [],
+      summary: {
+        itemCount: 1,
+        subtotalUsd: 129,
+        requestedPoints: 2000,
+        reservedPoints: 2000,
+        coveredUsd: 20,
+        payableUsd: 109,
+      },
+      message: 'mock order',
+    });
+  });
+
+  it('returns storefront order detail payload', () => {
+    expect(storefrontController.getOrderById('ord_test')).toEqual({
+      source: 'mock',
+      orderId: 'ord_test',
+      reservationId: 'rsv_test',
+      status: 'placed',
+      currency: 'USD',
+      createdAt: '2026-06-05T10:00:00.000Z',
+      lines: [],
+      summary: {
+        itemCount: 1,
+        subtotalUsd: 129,
+        requestedPoints: 2000,
+        reservedPoints: 2000,
+        coveredUsd: 20,
+        payableUsd: 109,
+      },
+      message: 'mock order detail',
     });
   });
 });
