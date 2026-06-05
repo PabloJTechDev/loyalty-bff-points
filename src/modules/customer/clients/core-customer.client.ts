@@ -37,7 +37,7 @@ export class CoreCustomerClient {
     private readonly configService: ConfigService,
   ) {
     this.baseUrl =
-      this.configService.get<string>('CORE_CUSTOMER_BASE_URL') ??
+      this.configService.get<string>('CORE_POINTS_BASE_URL') ??
       'http://localhost:3001';
   }
 

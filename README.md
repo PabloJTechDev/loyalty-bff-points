@@ -1,4 +1,4 @@
-# loyalty-bff-customer
+# loyalty-bff-points
 
 Experience-oriented BFF for the **customer** side of the loyalty platform.
 
@@ -8,9 +8,9 @@ The current minimum slice also exposes mock storefront endpoints so the frontend
 
 Part of the ecosystem:
 
-- `loyalty-web` → customer-facing frontend in **Next.js**
-- `loyalty-bff-customer` → experience-oriented BFF in **NestJS**
-- `loyalty-core-customer` → technical core service in **Go + Postgres**
+- `loyalty-web-points` → customer-facing frontend in **Next.js**
+- `loyalty-bff-points` → experience-oriented BFF in **NestJS**
+- `loyalty-core-points` → technical core service in **Go + Postgres**
 
 ```text
 Next.js web → NestJS BFF → Go core service + Postgres traces
@@ -20,7 +20,7 @@ Next.js web → NestJS BFF → Go core service + Postgres traces
 
 ## What this service is responsible for
 
-`loyalty-bff-customer` adapts backend behavior into frontend-ready payloads.
+`loyalty-bff-points` adapts backend behavior into frontend-ready payloads.
 
 It is responsible for:
 
@@ -107,7 +107,7 @@ Reusable technical context:
 Today this service uses:
 
 - controlled mocks for home/profile/wallet payloads
-- real integration with `loyalty-core-customer` for journey handoff and lookup
+- real integration with `loyalty-core-points` for journey handoff and lookup
 
 This is intentional: it keeps the portfolio slice realistic enough to demonstrate architecture and traceability without pretending the full domain is already implemented.
 
@@ -115,8 +115,8 @@ This is intentional: it keeps the portfolio slice realistic enough to demonstrat
 
 ## Related repositories
 
-- `loyalty-web` → presentation layer that consumes this BFF
-- `loyalty-core-customer` → technical core service used for journey handoff and trace lookup
+- `loyalty-web-points` → presentation layer that consumes this BFF
+- `loyalty-core-points` → technical core service used for journey handoff and trace lookup
 
 This repo is intentionally centered on orchestration, not on full domain ownership.
 
@@ -133,7 +133,7 @@ cp .env.example .env
 Main variables:
 
 - `PORT=3002`
-- `CORE_CUSTOMER_BASE_URL=http://localhost:3001`
+- `CORE_POINTS_BASE_URL=http://localhost:3001`
 
 ---
 
@@ -189,7 +189,7 @@ Related docs:
 
 - `../docs/architecture/architecture-decision.md`
 - `../docs/architecture/customer-experience-map.md`
-- `../docs/architecture/core-customer-contract.md`
+- `../docs/architecture/core-points-contract.md`
 
 Note: broader ecosystem/case-study docs currently live outside this repo and are not duplicated here yet.
 

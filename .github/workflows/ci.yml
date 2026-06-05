@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: loyalty-bff-customer-${{ github.workflow }}-${{ github.ref }}
+  group: loyalty-bff-points-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -56,7 +56,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: false
-          tags: loyalty-bff-customer:ci
+          tags: loyalty-bff-points:ci
 
   semgrep:
     runs-on: ubuntu-latest
@@ -138,12 +138,12 @@ jobs:
           file: ./Dockerfile
           push: false
           load: true
-          tags: loyalty-bff-customer:scan
+          tags: loyalty-bff-points:scan
 
       - name: Trivy container scan
         uses: aquasecurity/trivy-action@0.24.0
         with:
-          image-ref: loyalty-bff-customer:scan
+          image-ref: loyalty-bff-points:scan
           format: table
           severity: HIGH,CRITICAL
           ignore-unfixed: true

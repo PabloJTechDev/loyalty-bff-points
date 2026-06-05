@@ -6,7 +6,7 @@ export function logEvent(
 ) {
   const payload = {
     ts: new Date().toISOString(),
-    service: 'loyalty-bff-customer',
+    service: 'loyalty-bff-points',
     event,
     ...Object.fromEntries(
       Object.entries(fields).filter(([, value]) => value !== undefined),

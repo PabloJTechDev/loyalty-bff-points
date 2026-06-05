@@ -69,12 +69,12 @@ jobs:
           file: ./Dockerfile
           push: false
           load: true
-          tags: loyalty-bff-customer:nightly
+          tags: loyalty-bff-points:nightly
 
       - name: Trivy container scan
         uses: aquasecurity/trivy-action@0.24.0
         with:
-          image-ref: loyalty-bff-customer:nightly
+          image-ref: loyalty-bff-points:nightly
           format: table
           severity: HIGH,CRITICAL
           ignore-unfixed: true
@@ -89,7 +89,7 @@ jobs:
       - name: Checkmarx scan
         uses: Checkmarx/ast-github-action@2.3.25
         with:
-          project_name: loyalty-bff-customer
+          project_name: loyalty-bff-points
           cx_tenant: ${{ secrets.CHECKMARX_TENANT }}
           base_uri: ${{ secrets.CHECKMARX_BASE_URI }}
           cx_api_key: ${{ secrets.CHECKMARX_API_KEY }}
