@@ -81,6 +81,29 @@ describe('StorefrontController', () => {
           maxAllowedPoints: 3870,
         },
       })),
+      getOrders: jest.fn().mockReturnValue({
+        total: 2,
+        items: [
+          {
+            source: 'mock',
+            orderId: 'ord_mock_002',
+            reservationId: 'rsv_mock_002',
+            status: 'placed',
+            currency: 'USD',
+            createdAt: '2026-06-05T10:30:00.000Z',
+            lines: [],
+            summary: {
+              itemCount: 1,
+              subtotalUsd: 129,
+              requestedPoints: 2000,
+              reservedPoints: 2000,
+              coveredUsd: 20,
+              payableUsd: 109,
+            },
+          },
+        ],
+        source: 'mock',
+      }),
       placeOrder: jest.fn().mockImplementation((payload: { reservationId?: string }) => ({
         source: 'mock',
         orderId: 'ord_test',
@@ -227,6 +250,32 @@ describe('StorefrontController', () => {
         availablePoints: 15200,
         maxAllowedPoints: 3870,
       },
+    });
+  });
+
+  it('returns storefront order history payload', () => {
+    expect(storefrontController.getOrders()).toEqual({
+      total: 2,
+      items: [
+        {
+          source: 'mock',
+          orderId: 'ord_mock_002',
+          reservationId: 'rsv_mock_002',
+          status: 'placed',
+          currency: 'USD',
+          createdAt: '2026-06-05T10:30:00.000Z',
+          lines: [],
+          summary: {
+            itemCount: 1,
+            subtotalUsd: 129,
+            requestedPoints: 2000,
+            reservedPoints: 2000,
+            coveredUsd: 20,
+            payableUsd: 109,
+          },
+        },
+      ],
+      source: 'mock',
     });
   });
 

@@ -206,3 +206,14 @@ export interface StorefrontOrderResponseDto {
   summary: StorefrontOrderSummaryDto;
   message: string;
 }
+
+export type StorefrontOrderHistoryItemDto = Omit<
+  StorefrontOrderResponseDto,
+  'message'
+>;
+
+export interface StorefrontOrdersResponseDto {
+  total: number;
+  items: StorefrontOrderHistoryItemDto[];
+  source: 'mock';
+}

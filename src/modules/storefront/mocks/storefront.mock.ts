@@ -1,6 +1,7 @@
 import type {
   StorefrontCategoryDto,
   StorefrontHomeResponseDto,
+  StorefrontOrderHistoryItemDto,
   StorefrontProductDetailDto,
   StorefrontProductDto,
 } from '../dto/storefront-home-response.dto';
@@ -120,6 +121,65 @@ export const storefrontProductDetailsMock: StorefrontProductDetailDto[] = [
       minRedeemPoints: STOREFRONT_MIN_REDEEM_POINTS,
       redemptionRate: STOREFRONT_REDEMPTION_RATE_LABEL,
       maxRedeemablePercent: STOREFRONT_MAX_REDEEMABLE_PERCENT,
+    },
+  },
+];
+
+export const storefrontOrdersMock: StorefrontOrderHistoryItemDto[] = [
+  {
+    source: 'mock',
+    orderId: 'ord_mock_002',
+    reservationId: 'rsv_mock_002',
+    status: 'placed',
+    currency: 'USD',
+    createdAt: '2026-06-05T10:30:00.000Z',
+    lines: [
+      {
+        productId: 'prod_headphones',
+        sku: 'SKU-HEADPHONES-001',
+        name: 'Audífonos inalámbricos',
+        quantity: 1,
+        unitPriceUsd: 129,
+        lineSubtotalUsd: 129,
+        categoryId: 'electronics',
+        categoryName: 'Electrónica',
+      },
+    ],
+    summary: {
+      itemCount: 1,
+      subtotalUsd: 129,
+      requestedPoints: 2000,
+      reservedPoints: 2000,
+      coveredUsd: 20,
+      payableUsd: 109,
+    },
+  },
+  {
+    source: 'mock',
+    orderId: 'ord_mock_001',
+    reservationId: 'rsv_mock_001',
+    status: 'placed',
+    currency: 'USD',
+    createdAt: '2026-06-04T18:20:00.000Z',
+    lines: [
+      {
+        productId: 'prod_backpack',
+        sku: 'SKU-BACKPACK-001',
+        name: 'Mochila urbana',
+        quantity: 2,
+        unitPriceUsd: 59,
+        lineSubtotalUsd: 118,
+        categoryId: 'accessories',
+        categoryName: 'Accesorios',
+      },
+    ],
+    summary: {
+      itemCount: 2,
+      subtotalUsd: 118,
+      requestedPoints: 1500,
+      reservedPoints: 1500,
+      coveredUsd: 15,
+      payableUsd: 103,
     },
   },
 ];

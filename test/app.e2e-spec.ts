@@ -200,6 +200,20 @@ describe('AppController (e2e)', () => {
     expect(cancelResponse.body.expiresAt).toBeUndefined();
   });
 
+  it('/api/v1/storefront/orders (GET) returns seeded mock history', async () => {
+    const httpServer = app.getHttpServer() as Parameters<typeof request>[0];
+
+    const response = await request(httpServer)
+      .get('/api/v1/storefront/orders')
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      source: 'mock',
+      total: 2,
+    });
+    expect(response.body.items[0].orderId).toBe('ord_mock_002');
+  });
+
   it('prevents double transitions for reservations', async () => {
     const httpServer = app.getHttpServer() as Parameters<typeof request>[0];
 
@@ -225,5 +239,42 @@ describe('AppController (e2e)', () => {
       .expect(400);
 
     expect(invalidTransition.body.message).toContain('cannot be cancelled');
+  });
+
+  it('supports reserve -> confirm -> place order -> order history', async () => {
+    const httpServer = app.getHttpServer() as Parameters<typeof request>[0];
+
+    const reservation = await request(httpServer)
+      .post('/api/v1/storefront/redemptions/reserve')
+      .send({
+        items: [{ productId: 'prod_headphones', quantity: 1 }],
+        requestedPoints: 2000,
+        availablePoints: 15200,
+      })
+      .expect(201);
+
+    await request(httpServer)
+      .post(`/api/v1/storefront/redemptions/reservations/${reservation.body.reservationId}/confirm`)
+      .expect(201);
+
+    const order = await request(httpServer)
+      .post('/api/v1/storefront/orders')
+      .send({
+        reservationId: reservation.body.reservationId,
+        items: [{ productId: 'prod_headphones', quantity: 1 }],
+        requestedPoints: 2000,
+        reservedPoints: 2000,
+        coveredUsd: 20,
+        payableUsd: 109,
+      })
+      .expect(201);
+
+    const history = await request(httpServer)
+      .get('/api/v1/storefront/orders')
+      .expect(200);
+
+    expect(order.body.orderId).toMatch(/^ord_/);
+    expect(history.body.total).toBe(3);
+    expect(history.body.items[0].orderId).toBe(order.body.orderId);
   });
 });

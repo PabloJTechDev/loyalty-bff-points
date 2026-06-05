@@ -239,6 +239,17 @@ describe('StorefrontService', () => {
     );
   });
 
+  it('returns seeded order history sorted by createdAt desc', () => {
+    const response = service.getOrders();
+
+    expect(response).toMatchObject({
+      source: 'mock',
+      total: 2,
+    });
+    expect(response.items[0].orderId).toBe('ord_mock_002');
+    expect(response.items[1].orderId).toBe('ord_mock_001');
+  });
+
   it('places an order after the reservation is confirmed', () => {
     const reservation = service.reserve({
       items: [{ productId: 'prod_headphones', quantity: 1 }],
@@ -277,6 +288,10 @@ describe('StorefrontService', () => {
     const fetched = service.getOrderById(order.orderId);
     expect(fetched.orderId).toBe(order.orderId);
     expect(fetched.reservationId).toBe(reservation.reservationId);
+
+    const history = service.getOrders();
+    expect(history.items[0].orderId).toBe(order.orderId);
+    expect(history.total).toBe(3);
   });
 
   it('blocks order placement when reservation is not confirmed', () => {
@@ -313,6 +328,17 @@ describe('StorefrontService', () => {
         items: [{ productId: 'prod_headphones', quantity: 1 }],
       }),
     ).toThrow(BadRequestException);
+  });
+
+  it('resolves seeded mock order by id', () => {
+    const order = service.getOrderById('ord_mock_001');
+
+    expect(order).toMatchObject({
+      orderId: 'ord_mock_001',
+      reservationId: 'rsv_mock_001',
+      status: 'placed',
+      currency: 'USD',
+    });
   });
 
   it('throws not found when order does not exist', () => {

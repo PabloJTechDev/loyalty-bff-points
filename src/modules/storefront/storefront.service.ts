@@ -6,6 +6,7 @@ import {
   STOREFRONT_REDEMPTION_RATE_LABEL,
   storefrontCategoriesMock,
   storefrontHomeMock,
+  storefrontOrdersMock,
   storefrontProductDetailsMock,
   storefrontProductsMock,
 } from './mocks/storefront.mock';
@@ -23,6 +24,7 @@ import type {
   StorefrontPlaceOrderRequestDto,
   StorefrontOrderResponseDto,
   StorefrontOrderLineDto,
+  StorefrontOrdersResponseDto,
 } from './dto/storefront-home-response.dto';
 
 type MockReservationRecord = Omit<StorefrontReservationStateResponseDto, 'message'> & {
@@ -215,6 +217,16 @@ export class StorefrontService {
     );
   }
 
+  getOrders(): StorefrontOrdersResponseDto {
+    const items = this.getAllOrders().map(({ message: _message, ...order }) => order);
+
+    return {
+      total: items.length,
+      items,
+      source: 'mock',
+    };
+  }
+
   placeOrder(payload: StorefrontPlaceOrderRequestDto): StorefrontOrderResponseDto {
     if (!payload.reservationId) {
       throw new BadRequestException('reservationId is required before placing an order.');
@@ -291,7 +303,7 @@ export class StorefrontService {
   }
 
   getOrderById(orderId: string): StorefrontOrderResponseDto {
-    const order = this.orders.get(orderId);
+    const order = this.getAllOrders().find((candidate) => candidate.orderId === orderId);
 
     if (!order) {
       throw new NotFoundException(`Order ${orderId} not found`);
@@ -301,6 +313,21 @@ export class StorefrontService {
       ...order,
       message: 'Order loaded successfully using the mock storefront order flow.',
     };
+  }
+
+  private getAllOrders(): StorefrontOrderResponseDto[] {
+    const runtimeOrders = Array.from(this.orders.values()).map((order) => ({
+      ...order,
+      message: 'Order loaded successfully using the mock storefront order flow.',
+    }));
+    const seededOrders = storefrontOrdersMock.map((order) => ({
+      ...order,
+      message: 'Order loaded successfully using the mock storefront order flow.',
+    }));
+
+    return [...seededOrders, ...runtimeOrders].sort((left, right) =>
+      right.createdAt.localeCompare(left.createdAt),
+    );
   }
 
   private getStoredReservation(reservationId: string): MockReservationRecord {

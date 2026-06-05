@@ -13,6 +13,7 @@ import type {
   StorefrontReservationStateResponseDto,
   StorefrontPlaceOrderRequestDto,
   StorefrontOrderResponseDto,
+  StorefrontOrdersResponseDto,
 } from './dto/storefront-home-response.dto';
 
 @Controller('v1/storefront')
@@ -69,6 +70,11 @@ export class StorefrontController {
     @Param('reservationId') reservationId: string,
   ): StorefrontReservationStateResponseDto {
     return this.storefrontService.cancelReservation(reservationId);
+  }
+
+  @Get('orders')
+  getOrders(): StorefrontOrdersResponseDto {
+    return this.storefrontService.getOrders();
   }
 
   @Post('orders')
