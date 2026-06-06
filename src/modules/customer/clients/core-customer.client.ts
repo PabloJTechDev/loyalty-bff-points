@@ -255,6 +255,29 @@ export class CoreCustomerClient {
     }
   }
 
+  async getPointsBalance(customerId: string): Promise<{ balancePoints: number; lifetimeAccrued: number; lifetimeRedeemed: number; updatedAt: string } | null> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${this.baseUrl}/v1/points/${encodeURIComponent(customerId)}/balance`, { timeout: 1500 }),
+      );
+      return response.data;
+    } catch (error) {
+      if (error instanceof AxiosError && error.response?.status === 404) return null;
+      return null;
+    }
+  }
+
+  async getPointsTransactions(customerId: string): Promise<{ items: Array<{ transactionId: string; type: string; points: number; referenceId: string; source: string; description: string; createdAt: string }>; total: number }> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${this.baseUrl}/v1/points/${encodeURIComponent(customerId)}/transactions`, { timeout: 1500 }),
+      );
+      return response.data;
+    } catch {
+      return { items: [], total: 0 };
+    }
+  }
+
   private mapErrorToStatus(
     error: unknown,
     checkedAt: string,

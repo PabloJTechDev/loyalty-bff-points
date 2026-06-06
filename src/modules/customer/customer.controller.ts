@@ -90,4 +90,14 @@ export class CustomerController {
   ): Promise<CustomerLoginTraceDetailsDto> {
     return this.customerService.getLoginByLoginId(loginId);
   }
+
+  @Get('points/:customerId/balance')
+  getPointsBalance(@Param('customerId') customerId: string) {
+    return this.customerService.getPointsBalance(customerId);
+  }
+
+  @Get('points/:customerId/transactions')
+  getPointsTransactions(@Param('customerId') customerId: string) {
+    return this.customerService.getPointsTransactions(customerId);
+  }
 }

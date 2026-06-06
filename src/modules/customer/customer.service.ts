@@ -165,4 +165,16 @@ export class CustomerService {
   ): 'mock' | 'core-customer' {
     return coreStatus.available ? 'core-customer' : 'mock';
   }
+
+  async getPointsBalance(customerId: string) {
+    const balance = await this.coreCustomerClient.getPointsBalance(customerId);
+    if (!balance) {
+      return { customerId, balancePoints: 0, lifetimeAccrued: 0, lifetimeRedeemed: 0, source: 'not_found' };
+    }
+    return { customerId, ...balance, source: 'core-points' };
+  }
+
+  async getPointsTransactions(customerId: string) {
+    return this.coreCustomerClient.getPointsTransactions(customerId);
+  }
 }
