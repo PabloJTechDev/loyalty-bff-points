@@ -91,6 +91,36 @@ Reusable technical context:
 
 ---
 
+## Architecture
+
+Clean Architecture + DDD Tactical with NestJS journey modules under `src/modules/`:
+
+```
+src/modules/
+  enrollment/    → POST /v1/customer/enrollment  +  GET /v1/customer/enrollment-traces/:id
+  auth/          → POST /v1/customer/login|password-change  +  GET traces
+  wallet/        → GET /v1/customer/wallet  +  GET /v1/customer/points/:id/balance|transactions
+  profile/       → GET /v1/customer/home|profile-summary
+
+src/shared/
+  infrastructure/   → CoreCustomerClient
+  logging/          → JsonLog
+  metrics/          → Prometheus HTTP middleware
+```
+
+Each journey module follows the same layering:
+
+| Layer | Folder | Responsibility |
+|---|---|---|
+| Presentation | `presentation/` | Controller + request/response DTOs |
+| Application | `application/` | Use cases with `.execute()` method |
+| Domain | `domain/ports/` | TypeScript interface + Symbol DI token |
+| Infrastructure | `infrastructure/adapters/` | Adapter implementing the port |
+
+Dependency injection uses NestJS `@Inject(SYMBOL_TOKEN)` with interface types — no concrete class coupling in use cases.
+
+---
+
 ## Technical highlights
 
 - **NestJS modular structure**
