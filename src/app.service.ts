@@ -1,18 +1,27 @@
-import { Injectable } from '@nestjs/common';
-import { CustomerService } from './modules/customer/customer.service';
+import { Injectable } from '@nestjs/common'
+import { CoreCustomerClient } from './shared/infrastructure/core-customer.client'
 
 @Injectable()
 export class AppService {
-  constructor(private readonly customerService: CustomerService) {}
+  constructor(private readonly coreCustomerClient: CoreCustomerClient) {}
 
   getHealth() {
     return {
       status: 'ok',
       service: 'bff-customer',
-    };
+    }
   }
 
-  getReadiness() {
-    return this.customerService.getReadiness();
+  async getReadiness() {
+    const coreCustomer = await this.coreCustomerClient.ping()
+
+    return {
+      status: coreCustomer.available ? 'ready' : 'degraded',
+      service: 'bff-customer',
+      checkedAt: new Date().toISOString(),
+      integrations: {
+        coreCustomer,
+      },
+    }
   }
 }

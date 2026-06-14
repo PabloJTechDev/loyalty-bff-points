@@ -1,6 +1,6 @@
-import { Controller, Get, Header } from '@nestjs/common';
-import { AppService } from './app.service';
-import { metricsRegistry } from './common/metrics/http-metrics';
+import { Controller, Get, Header } from '@nestjs/common'
+import { AppService } from './app.service'
+import { metricsRegistry } from './shared/metrics/http-metrics'
 
 @Controller()
 export class AppController {
@@ -8,17 +8,17 @@ export class AppController {
 
   @Get('health')
   getHealth() {
-    return this.appService.getHealth();
+    return this.appService.getHealth()
   }
 
   @Get('ready')
   getReadiness() {
-    return this.appService.getReadiness();
+    return this.appService.getReadiness()
   }
 
   @Get('metrics')
   @Header('Content-Type', metricsRegistry.contentType)
   async getMetrics() {
-    return metricsRegistry.metrics();
+    return metricsRegistry.metrics()
   }
 }
