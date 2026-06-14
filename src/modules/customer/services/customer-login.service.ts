@@ -79,6 +79,22 @@ export class CustomerLoginService {
     };
 
     if (coreCustomer.available) {
+      // Resolve real customerId by emailHash before handoff
+      const emailHash = trace.payloadPreparedForCore.customerEmailHash;
+      const customerRecord = await this.coreCustomerClient.getCustomerByEmailHash(emailHash);
+      if (customerRecord?.customerId) {
+        trace.customerSnapshot = {
+          ...trace.customerSnapshot,
+          customerId: customerRecord.customerId,
+          tierName: customerRecord.loyaltyTier,
+        };
+        logEvent('login.customer-id.resolved', {
+          loginId,
+          customerId: customerRecord.customerId,
+          tier: customerRecord.loyaltyTier,
+        });
+      }
+
       const handoff = await this.coreCustomerClient.handoffLogin(
         trace.payloadPreparedForCore,
       );

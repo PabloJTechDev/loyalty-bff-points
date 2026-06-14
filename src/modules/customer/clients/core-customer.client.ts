@@ -232,6 +232,23 @@ export class CoreCustomerClient {
     }
   }
 
+  async getCustomerByEmailHash(
+    emailHash: string,
+  ): Promise<{ customerId: string; customerEmailHash: string; loyaltyTier: string; enrollmentStatus: string } | null> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(
+          `${this.baseUrl}/v1/customers/by-hash/${encodeURIComponent(emailHash)}`,
+          { timeout: 1500 },
+        ),
+      );
+      return response.data as { customerId: string; customerEmailHash: string; loyaltyTier: string; enrollmentStatus: string };
+    } catch (error) {
+      if (error instanceof AxiosError && error.response?.status === 404) return null;
+      return null;
+    }
+  }
+
   async getProfileSummaryByCustomerId(
     customerId: string,
   ): Promise<CustomerProfileSummaryCoreResponseDto | null> {
